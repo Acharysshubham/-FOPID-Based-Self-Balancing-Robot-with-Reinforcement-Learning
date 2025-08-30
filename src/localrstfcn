@@ -1,0 +1,7 @@
+function in = localResetFcn(in)
+%LOCALRESETFCN Randomizes reference signal each episode
+% Adjust the block path if your subsystem name differs
+blk = sprintf('RL_Model/Desired \nPitch Angle');
+h = -1.5 + 1.5 * rand(1,1);
+in = setBlockParameter(in, blk, 'Value', num2str(h));
+end
