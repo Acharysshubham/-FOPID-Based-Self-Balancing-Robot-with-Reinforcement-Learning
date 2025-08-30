@@ -1,0 +1,9 @@
+function plot_training_curve(t, desired, actual)
+%PLOT_TRAINING_CURVE Quick comparison plot
+figure; 
+plot(t, desired, 'LineWidth', 1.2); hold on;
+plot(t, actual,  'LineWidth', 1.2);
+xlabel('Time (s)'); ylabel('Pitch (rad)');
+legend('Desired','Actual'); grid on;
+title('Validation: Desired vs Actual');
+end
