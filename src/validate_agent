@@ -1,0 +1,54 @@
+function results = validate_agent(agent, model)
+%VALIDATE_AGENT Runs multiple target references, logs responses and gains.
+
+Tf = 500; Ts = 1; maxsteps = ceil(Tf/Ts);
+
+% Rebuild env to ensure consistent sim opts
+obsInfo = rlNumericSpec([3 1], 'LowerLimit', [-inf -inf -inf]', 'UpperLimit', [inf inf inf]');
+actInfo = rlNumericSpec([3 1]);
+env = make_env(model, [model '/RL Agent'], obsInfo, actInfo);
+env.ResetFcn = @(in)localResetFcn(in);
+
+% Validation sweep
+val_vals = -1.5 + 1.5 * rand(1,10);
+
+resp = cell(1, numel(val_vals));
+times = cell(1, numel(val_vals));
+kpLog = cell(1, numel(val_vals));
+kiLog = cell(1, numel(val_vals));
+kdLog = cell(1, numel(val_vals));
+tgtAll = [];
+
+simOpts = rlSimulationOptions('MaxSteps', maxsteps, 'StopOnError', 'on');
+
+for i = 1:numel(val_vals)
+    h = val_vals(i);
+    blk = sprintf('%s/Desired \nPitch Angle', model);
+    set_param(blk, 'Value', num2str(h));
+
+    experiences = sim(env, agent, simOpts);
+
+    tgtAll = [tgtAll, experiences.SimulationInfo.Desired];
+    resp{i} = experiences.SimulationInfo.Actual;
+    times{i} = experiences.SimulationInfo.tout;
+
+    kpLog{i} = experiences.SimulationInfo.Kp.signals.values;
+    kiLog{i} = experiences.SimulationInfo.Ki.signals.values;
+    kdLog{i} = experiences.SimulationInfo.Kd.signals.values;
+
+    % If your model outputs lambda/mu, capture similarly:
+    % lam{i} = experiences.SimulationInfo.Lambda.signals.values;
+    % mu{i}  = experiences.SimulationInfo.Mu.signals.values;
+end
+
+% Plot first trajectory for a quick look
+utils.plot_training_curve(times{1}, tgtAll(1:numel(times{1})), resp{1});
+
+% Save consolidated CSV (first run as demo)
+utils.save_run_log('data', times{1}, tgtAll(1:numel(times{1})), resp{1}, ...
+    kpLog{1}, kiLog{1}, kdLog{1});
+
+% Pack results
+results = struct('desired_values', val_vals, 'times', {times}, ...
+    'responses', {resp}, 'kp', {kpLog}, 'ki', {kiLog}, 'kd', {kdLog});
+end
