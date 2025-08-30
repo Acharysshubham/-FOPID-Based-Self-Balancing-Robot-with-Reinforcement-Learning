@@ -1,0 +1,17 @@
+function save_run_log(dataDir, t, desired, actual, kp, ki, kd)
+%SAVE_RUN_LOG Save a single run to CSV with schema: time, desired, actual, kp, ki, kd
+
+if ~exist(dataDir, 'dir'); mkdir(dataDir); end
+ts = datestr(now, 'yyyymmdd_HHMMSS');
+fname = fullfile(dataDir, ['run_log_' ts '.csv']);
+
+n = min([numel(t), numel(desired), numel(actual), numel(kp), numel(ki), numel(kd)]);
+T = t(:); D = desired(:); A = actual(:);
+KP = kp(:); KI = ki(:); KD = kd(:);
+
+tbl = table(T(1:n), D(1:n), A(1:n), KP(1:n), KI(1:n), KD(1:n), ...
+    'VariableNames', {'time','desired','actual','kp','ki','kd'});
+
+writetable(tbl, fname);
+fprintf('Saved log: %s\n', fname);
+end
