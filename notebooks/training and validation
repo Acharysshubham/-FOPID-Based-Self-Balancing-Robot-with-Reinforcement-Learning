@@ -1,0 +1,44 @@
+%% 02 — Training & Validation
+clc; clear; close all; rng(0)
+
+addpath(genpath('src')); addpath('data')
+model = 'RL_Model';
+
+% Build env
+obsInfo = rlNumericSpec([3 1], 'LowerLimit', [-inf -inf -inf]', 'UpperLimit', [inf inf inf]');
+actInfo = rlNumericSpec([3 1]);
+env = make_env(model, 'RL_Model/RL Agent', obsInfo, actInfo);
+env.ResetFcn = @(in)localResetFcn(in);
+
+% Networks
+critic = build_critic(obsInfo, actInfo);
+actor  = build_actor(obsInfo, actInfo);
+
+% Agent options
+Ts = 1; Tf = 500;
+agentOpts = rlDDPGAgentOptions( ...
+    'SampleTime', Ts, ...
+    'TargetSmoothFactor', 1e-3, ...
+    'DiscountFactor', 1.0, ...
+    'MiniBatchSize', 64, ...
+    'ExperienceBufferLength', 1e6);
+agentOpts.NoiseOptions.Variance = 0.3;
+agentOpts.NoiseOptions.VarianceDecayRate = 1e-5;
+
+agent = rlDDPGAgent(actor, critic, agentOpts);
+
+% Train
+maxepisodes = 5000; maxsteps = ceil(Tf/Ts);
+trainOpts = rlTrainingOptions( ...
+    'MaxEpisodes', maxepisodes, ...
+    'MaxStepsPerEpisode', maxsteps, ...
+    'ScoreAveragingWindowLength', 5, ...
+    'Verbose', false, ...
+    'Plots', 'training-progress', ...
+    'StopTrainingCriteria', 'AverageReward', ...
+    'StopTrainingValue', 998);
+
+trainingStats = train(agent, env, trainOpts);
+
+% Validate
+results = validate_agent(agent, model);
