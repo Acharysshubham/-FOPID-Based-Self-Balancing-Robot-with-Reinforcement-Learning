@@ -1,0 +1,32 @@
+function critic = build_critic(obsInfo, actInfo)
+%BUILD_CRITIC Critic network (DDPG)
+
+numObs = obsInfo.Dimension(1);
+numAct = actInfo.Dimension(1);
+
+statePath = [
+    imageInputLayer([numObs 1 1], 'Normalization','none','Name','State')
+    fullyConnectedLayer(500,'Name','CriticStateFC1')
+    reluLayer('Name','CriticRelu1')
+    fullyConnectedLayer(500,'Name','CriticStateFC2')];
+
+actionPath = [
+    imageInputLayer([numAct 1 1], 'Normalization','none','Name','Action')
+    fullyConnectedLayer(500,'Name','ActionFC1')];
+
+commonPath = [
+    additionLayer(2,'Name','add')
+    reluLayer('Name','CriticCommonRelu')
+    fullyConnectedLayer(1,'Name','CriticOutput')];
+
+lg = layerGraph();
+lg = addLayers(lg, statePath);
+lg = addLayers(lg, actionPath);
+lg = addLayers(lg, commonPath);
+lg = connectLayers(lg, 'CriticStateFC2','add/in1');
+lg = connectLayers(lg, 'ActionFC1','add/in2');
+
+opts = rlRepresentationOptions('LearnRate',1e-4,'GradientThreshold',1);
+critic = rlQValueRepresentation(lg, obsInfo, actInfo, ...
+    'Observation', {'State'}, 'Action', {'Action'}, opts);
+end
